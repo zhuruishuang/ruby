@@ -1106,6 +1106,18 @@ io_fflush(rb_io_t *fptr)
     return 0;
 }
 
+int rb_sock_set_revtimeo(int fd)
+{
+	int ret;
+	struct timeval timeout = {0, 0};
+	int len = sizeof(timeout);
+	
+	ret = getsockopt(fd, SOL_SOCKET,SO_RCVTIMEO, &timeout, &len);
+	if(ret < 0 || len != sizeof(timeout) || (!timeout.tv_sec && !timeout.tv_usec))
+		return 0;
+	return 1;
+}
+
 int
 rb_io_wait_readable(int f)
 {
@@ -1124,6 +1136,9 @@ rb_io_wait_readable(int f)
 #if defined(EWOULDBLOCK) && EWOULDBLOCK != EAGAIN
       case EWOULDBLOCK:
 #endif
+	if(rb_sock_set_revtimeo(f)){
+		return FALSE;
+	}
 	rb_thread_wait_fd(f);
 	return TRUE;
 
